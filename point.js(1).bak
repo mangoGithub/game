@@ -1,0 +1,408 @@
+/*
+1,试玩：切换到试玩场景，
+2,正式：切换到正式场景
+3,点击动作——球（top，left）；人（left）
+	中：球动人动，球进网人倒下，球数可变
+	不中：球动人动，球停止在人的前面，球数可变
+4，其次试玩由两种情况即：中和不中
+（1）鼠标滑过方向可以使方向高亮
+（2）鼠标按下一个方向去判断是中球还是不中（球的left、top 人的left true or false）
+（3）鼠标放开执行动作（调用把鼠标按下的参数传递过去）
+	方向三种情况：
+	1>left：球——left：254；bottom：450（中）left：254;bottom:370（没中）
+			人——left：348；（中）left：230；（没中）
+	2>center: 球——left：不变；bottom：520——540（中）bottom：310没中
+			人——top：300；（中）top：250
+	3>right:球——left:700; botttom:450(z)left:700； bottom:370
+			人——left：568（z）left：672
+	
+
+iLeft球的left值
+iTop 球队top值
+pLeft人的left值
+pTop人的top值
+offOn 球进还是不经的判断值			
+*/
+var flag = $.cookie('flag',false);
+var array = new Array();
+
+var point = {
+	iLeft: 0, 
+	iTop : 0,
+	pLeft: 0,
+	pTop : 0,
+	offOn: true,
+	iN :2,
+	classFix : '',
+	arrQL :[
+		[{'left':294,'bottom':420},{'left':260,'bottom':370}],
+		[{'left':300,'top':220},{'left':230,'top':200}]
+	],
+	arrQC :[
+		[{'left':475,'bottom':450},{'left':475,'bottom':310}],
+		[{'left':448,'top':300},{'left':448,'top':250}]
+	],
+	arrQR :[
+		[{'left':660,'bottom':420},{'left':700,'bottom':370}],
+		[{'left':570,'top':220},{'left':672,'top':200}]
+	],
+	init : function(){
+		var This = this;
+		this.iN = $('.gNum img').length;
+		//试玩切换
+		$('.gbtn1').on('click',function(){
+			$.cookie('flag',false);
+			$('.shot').show();
+			$(this).addClass('none');
+			$('.gbtn2').addClass('none');
+			//$('.gNum').removeClass('none');
+			$('.gbtn').removeClass('none');
+			$('.gtag').removeClass('none');
+			//提示文字
+			$('.gStrat').removeClass('none');
+			$('.gStrat01').addClass('none');
+			This.classFix = 's'; //判断状态
+			//选择方向
+			This.target_s($('.gleft'),This.arrQL,'left');
+			This.target_s($('.gcenter'),This.arrQC,'center');
+			This.target_s($('.gright'),This.arrQR,'right');
+			$('.qnum74').css('background','url(images/gnum.png) no-repeat -22px 0px');
+
+		});
+		//正式
+		$('.gbtn2').on('click',function(){
+			$.cookie('flag',true);
+			ajaxPostJsonAsync(
+					basePath() + "/worldcup/init_penalty_kick.jspx",
+					function(data, status) {
+						var arr = data.ACTIVE_TYPE.split("|");
+						var temp_array = new Array();
+						for ( var index in arr) {
+							temp_array.push(arr[index]);
+						}
+						array = temp_array;
+						if (array[0] == 0) {
+							$('.gClassfix').html('八强点球：大奖双人往返机票');
+							$('.gClassfix').removeClass('none');
+
+						}
+						if (array[0] == 1) {
+							$('.gClassfix').html('冠军点球：大奖单人往返机票');
+							$('.gClassfix').removeClass('none');
+						}
+						if (array[0] == 2) {
+							$('.gClassfix').html('微信点球：大奖单人往返机票');
+							$('.gClassfix').removeClass('none');
+						}
+						
+						if (data.PLAYCOUNT == 0) {
+							$('#clickPopup h1').html('亲 ~您没有点球大战的资格 %>_<% 请继续努力哦~！');
+							$('#clickPopup').show();
+							$('.shot').hide();
+							$('.gClassfix').html('');
+						}
+						if (data.PLAYCOUNT == 1) {
+							$(this).addClass('none');
+							$('.ball-1').hide();
+							$('.ball-2').hide();
+							$('.gNum').removeClass('none');
+							$('.gbtn1').addClass('none');
+							$('.gbtn').removeClass('none');
+							$('.gtag').removeClass('none');
+							$('.shot').show();
+						}
+						if (data.PLAYCOUNT == 2) {
+							$(this).addClass('none');
+							$('.ball-1').show();
+							$('.ball-2').hide();
+							$('.gNum').removeClass('none');
+							$('.gbtn1').addClass('none');
+							$('.gbtn').removeClass('none');
+							$('.gtag').removeClass('none');
+							$('.shot').show();
+						}
+						if (data.PLAYCOUNT == 3) {
+							$(this).addClass('none');
+							$('.ball-1').show();
+							$('.ball-2').show();
+							$('.gNum').removeClass('none');
+							$('.gbtn1').addClass('none');
+							$('.gbtn').removeClass('none');
+							$('.gtag').removeClass('none');
+							$('.shot').show();
+						}
+						
+					});
+			
+			//提示文字显示
+			
+			This.classFix = 'z'; //正式标书
+			//选择方向
+			This.target_z($('.gleft'),This.arrQL,'left');
+			This.target_z($('.gcenter'),This.arrQC,'center');
+			This.target_z($('.gright'),This.arrQR,'right');
+			$('.qnum74').css('background','url(images/gnum.png) no-repeat -66px 0px');
+
+		});
+		//返回
+		$('.gbtn').on('click',function(){
+			This.resetBack();	
+		})
+		//弹出框关闭
+		$('#qiuClose').on('click',function(){
+			This.resets();
+		})
+		//弹出框确定
+		$('#g_btn_que').on('click',function(){
+			This.resets();
+		})
+		
+	},
+	target_s : function(obj,arrN,tag){ //试玩选择方向
+		var This = this;
+		obj.hover(
+		function(){
+			$(this).addClass('hover');
+		},
+		function(){
+			$(this).removeClass('hover');
+		});
+		obj.click(function(){
+			var Btnarr= [1,0,0,0]
+			var Btn_array = getArrayItems(Btnarr,1);
+			if(Btn_array == 1){
+				This.offOn = true;
+				$('#clickPopup h1').html('亲，你进球了，恭喜！');
+			}else{
+				This.offOn = false;
+				$('#clickPopup h1').html('亲，不要气馁，下次加油！');
+			}
+			$('.qnum74').css('background','url(images/gnum.png) no-repeat');
+			$('.gqiuY').addClass('none');
+			This.Position(arrN,tag);
+			$('.gtag').addClass('none');	
+		});
+	},
+	target_z : function (obj,arrN,tag){ //正式选择方向
+		obj.hover(
+		function(){
+			$(this).addClass('hover');
+		},
+		function(){
+			$(this).removeClass('hover');
+		});
+		var This = this;
+		obj.click(function(){
+			if($.cookie('flag')=='true'){
+				ajaxPostJson(
+						basePath() + "/worldcup/execute_penalty_kick.jspx",
+						function(data, status) {
+							if (data.PLAYCOUNT == 2) {
+								$('.ball-1').show();
+								$('.ball-2').hide();
+							}
+							if (data.PLAYCOUNT == 1) {
+								$('.ball-1').hide();
+								$('.ball-2').hide();
+							}
+							if (data.PLAYCOUNT == 0) {
+								$('.gNum').addClass('none');
+								$('.gbtn1').removeClass('none');
+								$('.gbtn').addClass('none');
+								$('.gtag').addClass('none');
+								$('.gClassfix').html('');
+								$('.shot').hide();
+							}
+							
+							if (data.PLAYCOUNT >= 0) {
+								if (data.PRIZE == 1) {
+									This.offOn = true;
+									$('#clickPopup h1').html('恭喜你，球进了！你不是一个人在战斗！送您一份双人往返机票！');
+									$('.gqiuY').addClass('none');
+									//$('.gClassfix').html('八强点球：大奖双人往返机票');
+									This.Position(arrN,tag);
+									$('.gtag').addClass('none');
+									$('.qnum74').css('background','url(images/gnum.png) no-repeat -66px 0px');				This.offOn = true;
+
+									
+								}
+								if (data.PRIZE == 2) {
+									This.offOn = true;
+									$('#clickPopup h1').html('~ (^_^)∠※ 矮油,进球了?脚法太好挡不住啊！送您一份单人往返机票！');
+									$('.gqiuY').addClass('none');
+									//$('.gClassfix').html('冠军点球：大奖单人往返机票');
+									This.Position(arrN,tag);
+									$('.gtag').addClass('none');
+									$('.qnum74').css('background','url(images/gnum.png) no-repeat -44px 0px');				This.offOn = true;
+
+								}
+								if (data.PRIZE == 4) {
+									This.offOn = false;
+									$('#clickPopup h1').html('%>_<% 啊哦~球没进!送您一张咖啡券！ 下次继续加油哦');
+									$('.gqiuY').addClass('none');
+									//$('.gClassfix').html('微信点球：大奖单人往返机票');
+									This.Position(arrN,tag);
+									$('.gtag').addClass('none');
+									$('.qnum74').css('background','url(images/gnum.png) no-repeat -22px 0px');				This.offOn = true;
+
+								}
+								
+							}else{
+								alert(9);
+								$('#clickPopup h1').html('亲 ~您的点球机会用完了 %>_<% 请继续加油哦~！');
+								$('#clickPopup').show();
+								$('.qnum74').css('background','url(images/gnum.png) no-repeat');				This.offOn = true;
+								$('.gNum').addClass('none');
+								$('.gbtn1').removeClass('none');
+								$('.gClassfix').html('');
+								$('.gbtn').addClass('none');
+								$('.gtag').addClass('none');
+								$('.shot').hide();
+								
+							}
+							
+						},{activeType:array[0]});
+			}
+
+		})
+		
+	},
+	
+	Position : function(arrN,tag){ //确定球和人的运动轨迹（left、top）
+		 
+		if(this.offOn){
+			this.iLeft = arrN[0][0].left;
+			this.iTop = arrN[0][0].bottom;
+			this.pLeft = arrN[1][0].left;
+			this.pTop = arrN[1][0].top;
+			this.win(tag);
+			array.splice(0,1);
+			if (array[0] == 1) {
+				$('.gClassfix').html('冠军点球：大奖单人往返机票');
+				$('.gClassfix').removeClass('none');
+			}
+			if (array[0] == 2) {
+				$('.gClassfix').html('微信点球：大奖单人往返机票');
+				$('.gClassfix').removeClass('none');
+			}
+			//alert(array);
+		}else{
+			this.iLeft = arrN[0][1].left;
+			this.iTop = arrN[0][1].bottom;
+			this.pLeft = arrN[1][1].left;
+			this.pTop = arrN[1][1].top;
+			this.lose(tag);
+			array.splice(0,1);
+			if (array[0] == 1) {
+				$('.gClassfix').html('冠军点球：大奖单人往返机票');
+				$('.gClassfix').removeClass('none');
+			}
+			if (array[0] == 2) {
+				$('.gClassfix').html('微信点球：大奖单人往返机票');
+				$('.gClassfix').removeClass('none');
+			}
+			//alert(array);
+		}
+	},
+	winMove : function(n){ //进球运动执行
+		var This = this;
+		doMove($('.gqiu')[0],{'left':This.iLeft,'bottom':This.iTop},'backOut');
+		$('.gYuan').css('background','url('+basePath()+'/resources/images/worldcup/qiuYuan.gif) no-repeat')
+		doMove($('.gYuan')[0],{'left':This.pLeft,'top':This.pTop},'easeIn',800,function(){
+			$('.gYuan').css('background','url('+basePath()+'/resources/images/worldcup/qiuYuan.png) no-repeat -'+n+'px 0px');
+			setTimeout(function(){
+				$('#clickPopup').show();
+			},500);
+		});
+	},
+	win : function(tag){ // 进球方向判断
+		if(tag == 'left'){
+			this.winMove(248);
+		}else if( tag == 'center'){
+			this.winMove(130);
+		}else if( tag == 'right'){
+			this.winMove(387);
+		}
+	},
+	loseMove : function(){ // 不进球运动轨迹
+		var This = this;
+		doMove($('.gqiu')[0],{'left':This.iLeft,'bottom':This.iTop},'');
+		$('.gYuan').css('background','url('+basePath()+'/resources/images/worldcup/qiuYuan.gif) no-repeat')
+		doMove($('.gYuan')[0],{'left':This.pLeft,'top':This.pTop},'easeIn',1000,function(){
+			$('.gYuan').css('background','url('+basePath()+'/resources/images/worldcup/qiuYuan.png) no-repeat');
+			setTimeout(function(){
+				$('#clickPopup').show();
+			},500);
+		});
+	},
+	lose : function(tag){ // 不进球判断方向
+		if( tag == 'left' ){
+			this.loseMove();
+		}else if( tag == 'center' ){
+			this.loseMove();
+		}else if( tag == 'right' ){
+			this.loseMove();
+		}
+	},
+	resets : function(){ // 返回、关闭、确定 （重置页面）
+		if( this.classFix == 'z' ){
+			$('.gqiu').css({'left':475,'bottom':135});
+			$('.gYuan').css({'left':448,'top':200,'background':'url('+basePath()+'/resources/images/worldcup/qiuYuan.png) no-repeat'});
+			$('#clickPopup').hide();
+			$('.gtag').removeClass('none');
+			$('.gqiuY').removeClass('none');
+		}else{
+			$('#clickPopup').hide();
+			$('.gqiu').css({'left':475,'bottom':135});
+			$('.gYuan').css({'left':448,'top':200,'background':'url('+basePath()+'/resources/images/worldcup/qiuYuan.png) no-repeat'});
+			$('.gbtn1').removeClass('none');
+			$('.gbtn2').removeClass('none');
+			$('.gNum').addClass('none');
+			$('.gbtn').addClass('none');
+			$('.gtag').addClass('none');
+			$('#clickPopup').hide();
+			$('.gStrat').addClass('none');
+			$('.gStrat01').removeClass('none');
+			$('.gqiuY').removeClass('none');
+			$('.gClassfix').addClass('none');
+			this.classFix = '';
+		}
+	},
+	resetBack : function(){
+		$('#clickPopup').hide();
+		$('.gqiu').css({'left':475,'bottom':135});
+		$('.gYuan').css({'left':448,'top':200,'background':'url('+basePath()+'/resources/images/worldcup/qiuYuan.png) no-repeat'});
+		$('.gbtn1').removeClass('none');
+		$('.gbtn2').removeClass('none');
+		$('.gNum').addClass('none');
+		$('.gbtn').addClass('none');
+		$('.gtag').addClass('none');
+		$('#clickPopup').hide();
+		$('.gStrat').addClass('none');
+		$('.gStrat01').removeClass('none');
+		$('.gqiuY').removeClass('none');
+		$('.gClassfix').addClass('none');
+		this.classFix = '';
+	}
+	
+	
+}
+point.init();
+function getArrayItems(arr, num) {
+	var temp_array = new Array();
+	for ( var index in arr) {
+		temp_array.push(arr[index]);
+	}
+	var return_array = new Array();
+	for (var i = 0; i < num; i++) {
+		if (temp_array.length > 0) {
+			var arrIndex = Math.floor(Math.random() * temp_array.length);
+			return_array[i] = temp_array[arrIndex];
+			temp_array.splice(arrIndex, 1);
+		} else {
+			break;
+		}
+	}
+	return return_array;
+
+}
